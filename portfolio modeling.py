@@ -37,7 +37,8 @@ for ticker in tickers:
     tickers_info[ticker] = {}
     close_prices = df['Close'][ticker]
     monthly_prices = close_prices.resample('ME').last()
-    monthly_returns = monthly_prices.pct_change().dropna()
+    monthly_returns = (
+    monthly_prices.pct_change(fill_method=None).ffill().dropna())
     returns_dict[ticker] = monthly_returns
     tickers_info[ticker]["Average Monthly Returns"] = float(monthly_returns.mean())
     tickers_info[ticker]["Std Dev Monthly Returns"] = float(monthly_returns.std())
@@ -95,14 +96,28 @@ for i, ticker_col in enumerate(tickers_list):
 ws["E14"] = rf
 
 portfolio = f"{get_column_letter(start_col - 2)}11:{get_column_letter(end_col - 2)}11"
-cov_matrix_excel = f"{get_column_letter(start_col)}57:{get_column_letter(end_col)}{end_row}"
-ann_ret_avg = f"{get_column_letter(start_col)}8:{get_column_letter(end_col)}8"
+cov_matrix_excel = f"${get_column_letter(start_col)}$57:${get_column_letter(end_col)}${end_row}"
+ann_ret_avg = f"${get_column_letter(start_col)}$8:${get_column_letter(end_col)}$8"
 
 ws["C15"] = f"=SUM({portfolio})"
 
 ws["G15"] = f"=SQRT(MMULT({portfolio},MMULT({cov_matrix_excel},TRANSPOSE({portfolio}))))"
 ws["H15"] = f"=MMULT({portfolio},TRANSPOSE({ann_ret_avg}))"
 
+start_row_table = 23
 
+x_envelope = f"${get_column_letter(start_col - 1)}$17:${get_column_letter(end_col - 1)}$17"
+y_envelope = f"${get_column_letter(start_col - 1)}$18:${get_column_letter(end_col - 1)}$18"
+
+for i, ticker in enumerate(tickers_list):
+    col_letter = get_column_letter(start_col + i)
+    ws[f"{col_letter}{start_row_table - 1}"] = ticker
+
+while start_row_table != 54:
+    table_portfolio = f"E{start_row_table}:{get_column_letter(end_col)}{start_row_table}"
+    ws[f"C{start_row_table}"] = f"=SQRT(MMULT({table_portfolio},MMULT({cov_matrix_excel},TRANSPOSE({table_portfolio}))))"
+    ws[f"D{start_row_table}"] = f"=MMULT({table_portfolio},TRANSPOSE({ann_ret_avg}))"
+    ws[f"E{start_row_table}"] = f"=MMULT(A{start_row_table},{x_envelope}) + MMULT(B{start_row_table},{y_envelope})"
+    start_row_table += 1
 
 wb.save(filename)
