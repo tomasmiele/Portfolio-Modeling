@@ -61,12 +61,8 @@ else:
 
 ws = wb.active
 
-ws["B6"] = "average monthly returns"
-ws["B7"] = "std. dev. monthly returns"
-ws["B8"] = "annualized returns average"
-ws["B9"] = "annualized returns std dev"
-
 start_col = 5
+end_col = start_col + len(tickers) - 1
 
 for i, ticker in enumerate(tickers):
     col_letter = get_column_letter(start_col + i)
@@ -76,7 +72,9 @@ for i, ticker in enumerate(tickers):
     ws[f"{col_letter}{8}"] = tickers_info[ticker]["Annualized Returns Average"]
     ws[f"{col_letter}{9}"] = tickers_info[ticker]["Annualized Returns Std Dev"]
 
+
 start_row = 56
+end_row = start_row
 
 tickers_list = list(cov_matrix.columns)
 
@@ -86,11 +84,25 @@ for i, ticker in enumerate(tickers_list):
 
 for j, ticker in enumerate(tickers_list):
     ws[f"D{start_row + 1 + j}"] = ticker
+    end_row += 1
 
 for i, ticker_col in enumerate(tickers_list):
     for j, ticker_row in enumerate(tickers_list):
         value = cov_matrix.iloc[j, i] 
         col_letter = get_column_letter(start_col + i)
         ws[f"{col_letter}{start_row + 1 + j}"] = float(value)
+
+ws["E14"] = rf
+
+portfolio = f"{get_column_letter(start_col - 2)}11:{get_column_letter(end_col - 2)}11"
+cov_matrix_excel = f"{get_column_letter(start_col)}57:{get_column_letter(end_col)}{end_row}"
+ann_ret_avg = f"{get_column_letter(start_col)}8:{get_column_letter(end_col)}8"
+
+ws["C15"] = f"=SUM({portfolio})"
+
+ws["G15"] = f"=SQRT(MMULT({portfolio},MMULT({cov_matrix_excel},TRANSPOSE({portfolio}))))"
+ws["H15"] = f"=MMULT({portfolio},TRANSPOSE({ann_ret_avg}))"
+
+
 
 wb.save(filename)
